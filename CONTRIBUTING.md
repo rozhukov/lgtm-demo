@@ -18,7 +18,6 @@ of how they were created.
 
 ## Security
 
-This project uses [Project CodeGuard](https://project-codeguard.org) rules
-and [prodsec-skills](https://github.com/RedHatProductSecurity/prodsec-skills)
+This project uses [Red Hat Product Security SKILLS](https://github.com/RedHatProductSecurity/prodsec-skills)
 to automatically review code for security issues. PRs that introduce
 vulnerabilities will be flagged and must be resolved before merging.
