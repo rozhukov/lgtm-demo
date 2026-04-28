@@ -3,10 +3,15 @@
 # Usage: bash demo/reject-pr.sh <PR_NUMBER>
 #
 # Requires: gh cli authenticated (gh auth login)
+#
+# NOTE: --request-changes won't work on your own PR.
+# Use --comment for self-owned PRs (demo), or use a bot account
+# for the full --request-changes experience.
 
 PR_NUMBER="${1:-1}"
+MODE="${2:---comment}"  # --comment (own PR) or --request-changes (bot account)
 
-gh pr review "$PR_NUMBER" --request-changes --body "$(cat <<'EOF'
+gh pr review "$PR_NUMBER" "$MODE" --body "$(cat <<'EOF'
 ## Security Review — Changes Requested
 
 This PR was reviewed using [Project CodeGuard](https://project-codeguard.org)
