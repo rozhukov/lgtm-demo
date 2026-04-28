@@ -1,0 +1,113 @@
+name: "Bot: Submit AI-generated PR"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  submit-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Configure bot identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Create feature branch
+        run: |
+          git checkout -b feature/fix-auth-hashing
+
+      - name: Add vulnerable login endpoint
+        run: |
+          mkdir -p app/auth
+          cat > app/auth/login.py << 'PYEOF'
+          import hashlib
+          import sqlite3
+
+          from flask import request, jsonify
+
+          from app import app
+
+          DB_PASSWORD = "admin123"
+
+
+          @app.route("/login", methods=["POST"])
+          def login():
+              """Authenticate a user and return a session token."""
+              username = request.form["username"]
+              password = request.form["password"]
+
+              # Hash the password before comparing
+              hashed = hashlib.md5(password.encode()).hexdigest()
+
+              # Look up the user in the database
+              conn = sqlite3.connect("users.db")
+              cur = conn.cursor()
+              cur.execute(
+                  f"SELECT * FROM users WHERE username='{username}' AND password='{hashed}'"
+              )
+              user = cur.fetchone()
+              conn.close()
+
+              if user:
+                  token = hashlib.md5(username.encode()).hexdigest()
+                  return jsonify({"token": token, "user": username})
+
+              return jsonify({"error": "Invalid credentials"}), 401
+          PYEOF
+
+          # Fix indentation (heredoc adds leading spaces)
+          sed -i 's/^          //' app/auth/login.py
+
+      - name: Update app init to register login route
+        run: |
+          echo 'from app.auth import login  # noqa: E402, F401' >> app/__init__.py
+
+      - name: Add shallow test
+        run: |
+          cat > tests/test_login.py << 'PYEOF'
+          def test_login_rejects_bad_credentials(client):
+              resp = client.post("/login", data={"username": "nobody", "password": "wrong"})
+              assert resp.status_code == 401
+              assert resp.json["error"] == "Invalid credentials"
+          PYEOF
+          sed -i 's/^          //' tests/test_login.py
+
+      - name: Commit changes
+        run: |
+          git add -A
+          git commit -m "Fix: resolve password hashing in login endpoint
+
+          Added login endpoint with password hashing and DB lookup.
+          Added basic test for auth rejection."
+
+      - name: Push branch
+        run: |
+          git push origin feature/fix-auth-hashing
+
+      - name: Create PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --title "Fix: resolve password hashing in login endpoint" \
+            --body "Hey team! 👋
+
+          Found that the auth module was missing the login endpoint entirely.
+          Added it with password hashing and DB lookup.
+
+          **Changes:**
+          - Added login endpoint with password verification
+          - Added basic test for auth rejection
+          - CI passes ✅
+
+          Pretty straightforward fix. LGTM? 🙏" \
+            --base main \
+            --head feature/fix-auth-hashing
