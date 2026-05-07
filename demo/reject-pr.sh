@@ -32,7 +32,7 @@ and [prodsec-skills](https://github.com/RedHatProductSecurity/prodsec-skills).
 course and configuring your AI assistant with security-focused instructions per the
 [OpenSSF Guide](https://best.openssf.org/Security-Focused-Guide-for-AI-Code-Assistant-Instructions).
 
-_With love, your AI security reviewer_ :shield:
+_With love, your AI-assisted security reviewer_ :shield:
 EOF
 )"
 
